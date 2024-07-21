@@ -1,0 +1,17 @@
+[package]
+name = "pidigits_rust"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+clap = { version = "4.5.9", features = ["derive"] }
+color-eyre = "0.6.3"
+rug = { version = "1.25.0", features = ["float", "integer"] }
+
+[dev-dependencies]
+criterion = { version = "0.5.1", features = ["html_reports"] }
+
+[[bench]]
+name = "benchmark"
+harness = false
+path = "benches/benchmark.rs"

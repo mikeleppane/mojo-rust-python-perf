@@ -1,0 +1,13 @@
+**/target/
+**/benches/debug/**
+.git
+.vscode
+**/__pycache__
+**/.mypy_cache
+**/.pytest_cache
+**/.ruff_cache
+**/*.pyc
+**/*.pyo
+**debug/
+target/
+n_body_rust/benches/debug/**

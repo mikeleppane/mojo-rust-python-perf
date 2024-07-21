@@ -1,0 +1,120 @@
+[tool.poetry]
+name = "python-rust-mojo-perf"
+version = "0.1.0"
+description = ""
+authors = ["Mikko Leppänen <mikko.leppanen@vaisala.com>"]
+readme = "README.md"
+
+[tool.poetry.dependencies]
+python = "^3.10"
+click = "^8.1.7"
+
+
+[tool.poetry.group.dev.dependencies]
+mypy = "^1.10.1"
+isort = "^5.13.2"
+pytest = "^8.2.2"
+ruff = "^0.5.2"
+pytest-cov = "^5.0.0"
+black = "^24.4.2"
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
+
+[tool.ruff]
+target-version = "py312"
+exclude = [".git", ".mypy_cache", ".ruff_cache"]
+# Same as Black.
+line-length = 100
+
+
+[tool.ruff.lint]
+select = [
+    "E",
+    "F",
+    "B",
+    "W",
+    "C4",
+    "PIE",
+    "RET",
+    "SIM",
+    "RUF",
+    "C90",
+    "UP",
+    "ERA",
+    "ARG",
+    "TID",
+    "PERF",
+    "SLF",
+    "PTH",
+    "FURB",
+    "PL",
+]
+
+ignore = [
+    "E501",  # line-too-long
+    "UP040", # uses `TypeAlias` annotation instead of the `type` keyword, remove this when mypy supports PEP 695
+]
+
+# Allow autofix for all enabled rules (when `--fix`) is provided.
+fixable = [
+    "E",
+    "F",
+    "B",
+    "W",
+    "C4",
+    "PIE",
+    "RET",
+    "SIM",
+    "RUF",
+    "C90",
+    "UP",
+    "ERA",
+    "ARG",
+    "TID",
+    "SLF",
+    "PTH",
+]
+unfixable = []
+dummy-variable-rgx = "^(_+|(_+[a-zA-Z0-9_]*[a-zA-Z0-9]+?))$"
+
+
+extend-select = ["FURB"]
+preview = true
+per-file-ignores = {}
+
+[tool.ruff.lint.mccabe]
+max-complexity = 10
+
+[tool.mypy]
+exclude = "setup.py"
+# basic
+pretty = true
+
+# be strict(ish)
+disallow_untyped_calls = true
+disallow_untyped_defs = true
+check_untyped_defs = true
+strict_equality = true
+no_implicit_optional = true
+
+# warnings
+warn_unused_ignores = true
+warn_unreachable = true
+warn_redundant_casts = true
+warn_unused_configs = true
+
+ignore_missing_imports = true
+
+
+[tool.isort]
+profile = "black"
+
+[tool.black]
+line-length = 100
+
+[tool.pytest.ini_options]
+pythonpath = [".", "src"]
+python_files = "test_*.py"
+testpaths = ["src/tests"]
