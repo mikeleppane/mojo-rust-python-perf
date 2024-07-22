@@ -1,4 +1,4 @@
-SRC_DIR = ./python_rust_mojo_perf
+SRC_DIR = ./python_performance
 TEST_DIR = ./tests
 
 .PHONY: check fix run

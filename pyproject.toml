@@ -1,5 +1,5 @@
 [tool.poetry]
-name = "python-rust-mojo-perf"
+name = "python-performance"
 version = "0.1.0"
 description = ""
 authors = ["Mikko Leppänen <mikko.leppanen@vaisala.com>"]
@@ -88,9 +88,9 @@ per-file-ignores = {}
 max-complexity = 10
 
 [tool.mypy]
-exclude = "setup.py"
 # basic
 pretty = true
+show_error_codes = true
 
 # be strict(ish)
 disallow_untyped_calls = true
