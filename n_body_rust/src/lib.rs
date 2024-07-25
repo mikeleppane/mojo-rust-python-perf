@@ -1,17 +1,18 @@
+use smallvec::{smallvec, SmallVec};
 const SOLAR_MASS: f64 = 4.0 * std::f64::consts::PI * std::f64::consts::PI;
 const DAYS_PER_YEAR: f64 = 365.24;
 const DELTA_T: f64 = 0.01;
 const ENERGY_DIFF_THRESHOLD: f64 = 1e-4;
 
-pub struct Planet {
-    pos: [f64; 3],
-    vel: [f64; 3],
+pub struct Planet<const N: usize = 3> {
+    pos: [f64; N],
+    vel: [f64; N],
     mass: f64,
 }
 
 #[must_use]
-pub fn create_initial_system() -> Vec<Planet> {
-    vec![
+pub fn create_initial_system() -> SmallVec<[Planet; 5]> {
+    smallvec![
         // Sun
         Planet {
             pos: [0.0, 0.0, 0.0],
