@@ -1,4 +1,4 @@
-SRC_DIR = ./python_performance
+SRC_DIR = ./benchmarking
 TEST_DIR = ./tests
 
 .PHONY: check fix run
@@ -24,17 +24,5 @@ test:
 test-cov:
 	poetry run pytest --cov=$(SRC_DIR) --cov-report=term-missing --cov-report=html $(TEST_DIR)
 
-help: 
-	poetry run python src/library_db/app.py --help
-
 show-outdated:
 	poetry show --outdated
-
-bench-nbody-python:
-	poetry run python python_rust_mojo_perf/n_body_python/n_body.py -- --steps 10000 --bench
-
-bench-nbody-pypy:
-	poetry run pypy python_rust_mojo_perf/n_body_python/n_body.py -- --steps 100000 --bench
-
-bench-nbody-rust:
-	cargo run --release --manifest-path n_body_rust/Cargo.toml -- --steps 500000

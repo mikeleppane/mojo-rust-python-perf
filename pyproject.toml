@@ -1,9 +1,12 @@
 [tool.poetry]
-name = "python-performance"
+name = "benchmarking"
 version = "0.1.0"
 description = ""
 authors = ["Mikko Leppänen <mikko.leppanen@vaisala.com>"]
 readme = "README.md"
+
+[tool.poetry.scripts]
+benchmarks = "benchmarking.__main__:cli"
 
 [tool.poetry.dependencies]
 python = "^3.10"
@@ -12,7 +15,7 @@ numpy = "^2.0.1"
 
 
 [tool.poetry.group.dev.dependencies]
-mypy = "^1.10.1"
+mypy = "^1.11"
 isort = "^5.13.2"
 pytest = "^8.2.2"
 ruff = "^0.5.2"
@@ -89,10 +92,11 @@ per-file-ignores = {}
 max-complexity = 10
 
 [tool.mypy]
+enable_incomplete_feature = "NewGenericSyntax"
+
 # basic
 pretty = true
 show_error_codes = true
-
 # be strict(ish)
 disallow_untyped_calls = true
 disallow_untyped_defs = true

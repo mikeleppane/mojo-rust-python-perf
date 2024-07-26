@@ -1,8 +1,11 @@
 import math
 import time
 from dataclasses import dataclass
+from random import uniform
 
 import click
+
+from benchmarking.types import Problem, ProblemType
 
 PI = math.pi
 SOLAR_MASS = 4 * PI * PI
@@ -12,14 +15,14 @@ ENERGY_DIFF_THRESHOLD = 1e-4
 
 
 @dataclass
-class Planet:
+class Body:
     pos: list[float]
     vel: list[float]
     mass: float
 
 
-Sun = Planet([0.0, 0.0, 0.0], [0.0, 0.0, 0.0], SOLAR_MASS)
-Jupiter = Planet(
+Sun = Body([0.0, 0.0, 0.0], [0.0, 0.0, 0.0], SOLAR_MASS)
+Jupiter = Body(
     [4.84143144246472090e00, -1.16032004402742839e00, -1.03622044471123109e-01],
     [
         1.66007664274403694e-03 * DAYS_PER_YEAR,
@@ -29,7 +32,7 @@ Jupiter = Planet(
     9.54791938424326609e-04 * SOLAR_MASS,
 )
 
-Saturn = Planet(
+Saturn = Body(
     [8.34336671824457987e00, 4.12479856412430479e00, -4.03523417114321381e-01],
     [
         -2.76742510726862411e-03 * DAYS_PER_YEAR,
@@ -39,7 +42,7 @@ Saturn = Planet(
     2.85885980666130812e-04 * SOLAR_MASS,
 )
 
-Uranus = Planet(
+Uranus = Body(
     [1.28943695621391310e01, -1.51111514016986312e01, -2.23307578892655734e-01],
     [
         2.96460137564761618e-03 * DAYS_PER_YEAR,
@@ -49,7 +52,7 @@ Uranus = Planet(
     4.36624404335156298e-05 * SOLAR_MASS,
 )
 
-Neptune = Planet(
+Neptune = Body(
     [1.53796971148509165e01, -2.59193146099879641e01, 1.79258772950371181e-01],
     [
         2.68067772490389322e-03 * DAYS_PER_YEAR,
@@ -60,16 +63,29 @@ Neptune = Planet(
 )
 
 
+def create_n_bodies(n: int) -> list[Body]:
+    bodies = [
+        Body(
+            [uniform(-1, 1), uniform(-1, 1), uniform(-1, 1)],
+            [uniform(-1, 1), uniform(-1, 1), uniform(-1, 1)],
+            5.0e-05 * SOLAR_MASS * uniform(0.1, 1),
+        )
+        for _ in range(n - 1)
+    ]
+    bodies.insert(0, Sun)
+    return bodies
+
+
 INITIAL_SYSTEM = [Sun, Jupiter, Saturn, Uranus, Neptune]
 
 
-def offset_momentum(planets: list[Planet]) -> None:
+def offset_momentum(planets: list[Body]) -> None:
     for i in range(len(planets)):
         for j in range(3):
-            Sun.vel[j] -= planets[i].vel[j] * planets[i].mass / SOLAR_MASS
+            planets[0].vel[j] -= planets[i].vel[j] * planets[i].mass / SOLAR_MASS
 
 
-def advance(planets: list[Planet], dt: float) -> None:
+def advance(planets: list[Body], dt: float) -> None:
     N = len(planets)
     for i in range(N):
         for j in range(i + 1, N):
@@ -95,7 +111,7 @@ def advance(planets: list[Planet], dt: float) -> None:
         planets[i].pos[2] += dt * planets[i].vel[2]
 
 
-def energy(planets: list[Planet]) -> float:
+def energy(planets: list[Body]) -> float:
     e = 0.0
     N = len(planets)
     for i in range(N):
@@ -120,56 +136,64 @@ def energy(planets: list[Planet]) -> float:
     return e
 
 
-def simulate(steps: int) -> None:
+def simulate(system: list[Body], steps: int) -> None:
     """N-body simulation"""
     print("Starting N-BODY simulation...")
 
     # create the initial state of the system
-    offset_momentum(INITIAL_SYSTEM)
+    offset_momentum(system)
 
-    start_energy = energy(INITIAL_SYSTEM)
+    start_energy = energy(system)
 
     # Simulation Main Loop
     for _ in range(steps):
-        advance(INITIAL_SYSTEM, DELTA_T)
+        advance(system, DELTA_T)
 
-    end_energy = energy(INITIAL_SYSTEM)
+    end_energy = energy(system)
 
-    assert abs(start_energy - end_energy) < ENERGY_DIFF_THRESHOLD
+    if abs(start_energy - end_energy) < ENERGY_DIFF_THRESHOLD:
+        click.secho("Energy conserved", fg="green")
+    else:
+        click.secho(f"Energy not conserved: Got {end_energy}, expected {start_energy}", fg="red")
 
 
-def benchmark(steps: int) -> None:
+def benchmark(system: list[Body], steps: int) -> None:
     print("Starting N-BODY benchmark...")
     print(f"Number of steps: {steps}")
 
     t_start = time.perf_counter()
     # create the initial state of the system
-    offset_momentum(INITIAL_SYSTEM)
+    offset_momentum(system)
 
-    start_energy = energy(INITIAL_SYSTEM)
+    start_energy = energy(system)
 
-    # Simulation Main Loop
+    # Simulation Main Loop system
     for _ in range(steps):
-        advance(INITIAL_SYSTEM, DELTA_T)
+        advance(system, DELTA_T)
 
-    end_energy = energy(INITIAL_SYSTEM)
+    end_energy = energy(system)
 
     t_end = time.perf_counter()
 
-    assert abs(start_energy - end_energy) < ENERGY_DIFF_THRESHOLD
-
-    print(f"Time taken: {(t_end - t_start) * 1000:.2f} ms")
-
-
-@click.command()
-@click.option("-s", "--steps", default=100, help="Number of steps to run the simulation")
-@click.option("-b", "--bench", is_flag=True, help="Run the benchmark")
-def cli(steps: int, bench: bool) -> None:
-    if bench:
-        benchmark(steps)
+    if abs(start_energy - end_energy) < ENERGY_DIFF_THRESHOLD:
+        click.secho("Energy conserved", fg="green")
     else:
-        simulate(steps)
+        click.secho(f"Energy not conserved: Got {end_energy}, expected {start_energy}", fg="red")
+
+    click.secho(f"Time taken: {(t_end - t_start) * 1000:.2f} ms", fg="blue")
 
 
-if __name__ == "__main__":
-    cli()
+@dataclass(frozen=True)
+class NBodyPython(Problem):
+    type: ProblemType
+
+    steps: int
+    bodies: int | None = None
+
+    def solve(self) -> None:
+        system = create_n_bodies(self.bodies) if self.bodies else INITIAL_SYSTEM
+        simulate(system, self.steps)
+
+    def benchmark(self) -> None:
+        system = create_n_bodies(self.bodies) if self.bodies else INITIAL_SYSTEM
+        benchmark(system, self.steps)
