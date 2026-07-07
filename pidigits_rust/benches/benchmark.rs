@@ -1,41 +1,24 @@
-use criterion::{black_box, criterion_group, criterion_main, Criterion};
+use std::hint::black_box;
+
+use criterion::{Criterion, criterion_group, criterion_main};
 use pidigits_rust::chudnovsky;
 
-pub fn pidigits_benchmark(c: &mut Criterion) {
-    let mut group =
-        c.benchmark_group("Pi Digits Calculation with 1_000, 10_000, 100_000, 1_000_000 digits");
+fn pidigits_benchmark(c: &mut Criterion) {
+    let mut group = c.benchmark_group("pidigits");
+    // Big-integer work is slow; keep the sample count modest.
+    group.sample_size(10);
 
-    group.bench_function("1_000 steps", |b| {
-        b.iter(|| {
-            let pi = chudnovsky(1_000).expect("Failed to calculate pi");
-            black_box(pi);
+    for digits in [1_000_u32, 10_000, 100_000] {
+        group.bench_function(format!("{digits} digits"), |b| {
+            b.iter(|| {
+                let pi = chudnovsky(black_box(digits)).expect("valid digit count");
+                black_box(pi);
+            });
         });
-    });
-
-    group.bench_function("10_000 steps", |b| {
-        b.iter(|| {
-            let pi = chudnovsky(10_000).expect("Failed to calculate pi");
-            black_box(pi);
-        });
-    });
-
-    group.bench_function("100_000 steps", |b| {
-        b.iter(|| {
-            let pi = chudnovsky(100_000).expect("Failed to calculate pi");
-            black_box(pi);
-        });
-    });
-
-    group.bench_function("1_000_000 steps", |b| {
-        b.iter(|| {
-            let pi = chudnovsky(1_000_000).expect("Failed to calculate pi");
-            black_box(pi);
-        });
-    });
+    }
 
     group.finish();
 }
 
 criterion_group!(benches, pidigits_benchmark);
-
 criterion_main!(benches);

@@ -1,32 +1,32 @@
+"""Shared types for the cross-language benchmark harness."""
+
+from dataclasses import dataclass
 from enum import StrEnum
-from typing import Literal, Protocol, runtime_checkable
+from typing import Literal, get_args
 
-from click import Command
+type Language = Literal["python", "numpy", "rust", "mojo"]
 
-type TLanguage = Literal["python", "rust", "mojo"]
-
-
-@runtime_checkable
-class TCommand(Protocol):
-    def register(self) -> Command: ...
+LANGUAGES: tuple[Language, ...] = get_args(Language.__value__)
 
 
-class ProblemType(StrEnum):
-    N_BODY = "n_body"
+class Problem(StrEnum):
+    """A benchmark problem, implemented in several languages."""
+
+    N_BODY = "n-body"
+    PIDIGITS = "pidigits"
+
+    @property
+    def size_label(self) -> str:
+        """Human name for the problem's size parameter."""
+        return "steps" if self is Problem.N_BODY else "digits"
 
 
-@runtime_checkable
-class Problem(Protocol):
-    type: ProblemType
+@dataclass(frozen=True, slots=True)
+class BenchResult:
+    """The outcome of a single (problem, language, size) benchmark run."""
 
-    def solve(self) -> None: ...
-
-    def benchmark(self) -> None: ...
-
-
-@runtime_checkable
-class Runner(Protocol):
     problem: Problem
-    language: TLanguage
-
-    def execute(self) -> None: ...
+    language: Language
+    size: int
+    elapsed_ms: float
+    ok: bool

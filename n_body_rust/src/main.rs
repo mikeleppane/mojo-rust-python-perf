@@ -1,19 +1,22 @@
 use clap::Parser;
-use n_body_rust::simulate;
 
 #[derive(Parser, Debug)]
-#[command(version, about, long_about = None)]
+#[command(version, about = "N-body simulation of the outer solar system")]
 struct Args {
-    #[arg(short, long, default_value = "1000")]
+    /// Number of integration steps to run.
+    #[arg(short, long, default_value_t = 1000)]
     steps: usize,
 }
 
-fn cli() -> Args {
-    Args::parse()
-}
-
 fn main() {
-    let args = cli();
-    let n_steps = args.steps;
-    simulate(n_steps);
+    let args = Args::parse();
+    let (elapsed_ms, conserved) = n_body_rust::run(args.steps);
+
+    if !conserved {
+        eprintln!("warning: energy was not conserved");
+    }
+    eprintln!("N-body: {} steps in {elapsed_ms:.2} ms", args.steps);
+    // Machine-readable lines consumed by the benchmark harness.
+    println!("ELAPSED_MS {elapsed_ms:.3}");
+    println!("CONSERVED {conserved}");
 }

@@ -1,15 +1,17 @@
 [package]
 name = "pidigits_rust"
-version = "0.1.0"
-edition = "2021"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
 
 [dependencies]
-clap = { version = "4.5.9", features = ["derive"] }
-color-eyre = "0.6.3"
-rug = { version = "1.25.0", features = ["float", "integer"] }
+clap.workspace = true
+color-eyre.workspace = true
+rug.workspace = true
 
 [dev-dependencies]
-criterion = { version = "0.5.1", features = ["html_reports"] }
+criterion.workspace = true
 
 [[bench]]
 name = "benchmark"

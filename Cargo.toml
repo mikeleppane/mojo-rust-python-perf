@@ -1,0 +1,24 @@
+# Virtual workspace for the Rust benchmark crates.
+# Both crates share edition, dependency versions, and the release profile.
+[workspace]
+resolver = "3"
+members = ["n_body_rust", "pidigits_rust"]
+
+[workspace.package]
+edition = "2024"
+version = "0.2.0"
+rust-version = "1.85"
+license = "MIT"
+
+[workspace.dependencies]
+clap = { version = "4.6", features = ["derive"] }
+smallvec = { version = "1", features = ["const_generics", "const_new"] }
+rug = { version = "1.30", features = ["float", "integer"] }
+color-eyre = "0.6"
+criterion = { version = "0.8", features = ["html_reports"] }
+
+# Tuned for benchmarking: full LTO, single codegen unit, symbols stripped.
+[profile.release]
+lto = true
+strip = true
+codegen-units = 1

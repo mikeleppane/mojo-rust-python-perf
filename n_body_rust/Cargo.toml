@@ -1,14 +1,16 @@
 [package]
 name = "n_body_rust"
-version = "0.1.0"
-edition = "2021"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
 
 [dependencies]
-clap = { version = "4.5.9", features = ["derive"] }
-smallvec = { version = "1.13.2", features = ["const_generics", "const_new"] }
+clap.workspace = true
+smallvec.workspace = true
 
 [dev-dependencies]
-criterion = { version = "0.5.1", features = ["html_reports"] }
+criterion.workspace = true
 
 [[bench]]
 name = "benchmark"

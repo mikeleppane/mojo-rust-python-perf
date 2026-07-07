@@ -1,59 +1,34 @@
-use criterion::{black_box, criterion_group, criterion_main, Criterion};
+use std::hint::black_box;
+
+use criterion::{BatchSize, Criterion, criterion_group, criterion_main};
 use n_body_rust::{advance, create_initial_system, energy, offset_momentum};
 
-pub fn n_body_benchmark(c: &mut Criterion) {
-    let mut group =
-        c.benchmark_group("N-Body Simulation with 10_000, 100_000, 1_000_000, 10_000_000 steps");
+fn n_body_benchmark(c: &mut Criterion) {
+    let mut group = c.benchmark_group("n-body");
 
-    let mut initial_system = create_initial_system();
-
-    group.bench_function("10_000 steps", |b| {
-        b.iter(|| {
-            offset_momentum(&mut initial_system);
-            black_box(energy(&initial_system));
-            for _ in 0..10_000 {
-                advance(&mut initial_system);
-            }
-            black_box(energy(&initial_system));
+    for steps in [10_000_usize, 100_000, 1_000_000] {
+        group.bench_function(format!("{steps} steps"), |b| {
+            b.iter_batched(
+                || {
+                    // Fresh, momentum-corrected system for every sample so state
+                    // does not accumulate across iterations.
+                    let mut system = create_initial_system();
+                    offset_momentum(&mut system);
+                    system
+                },
+                |mut system| {
+                    for _ in 0..steps {
+                        advance(&mut system);
+                    }
+                    black_box(energy(&system));
+                },
+                BatchSize::SmallInput,
+            );
         });
-    });
-
-    group.bench_function("100_000 steps", |b| {
-        b.iter(|| {
-            offset_momentum(&mut initial_system);
-            black_box(energy(&initial_system));
-            for _ in 0..100_000 {
-                advance(&mut initial_system);
-            }
-            black_box(energy(&initial_system));
-        });
-    });
-
-    group.bench_function("1_000_000 steps", |b| {
-        b.iter(|| {
-            offset_momentum(&mut initial_system);
-            black_box(energy(&initial_system));
-            for _ in 0..1_000_000 {
-                advance(&mut initial_system);
-            }
-            black_box(energy(&initial_system));
-        });
-    });
-
-    group.bench_function("10_000_000 steps", |b| {
-        b.iter(|| {
-            offset_momentum(&mut initial_system);
-            black_box(energy(&initial_system));
-            for _ in 0..10_000_000 {
-                advance(&mut initial_system);
-            }
-            black_box(energy(&initial_system));
-        });
-    });
+    }
 
     group.finish();
 }
 
 criterion_group!(benches, n_body_benchmark);
-
 criterion_main!(benches);

@@ -1,0 +1,8 @@
+# target-cpu=native lets the benchmarks use the host's full instruction set
+# (AVX2/FMA etc.), which matters for a fair comparison against Mojo's SIMD.
+# The produced binaries are therefore NOT portable to other CPUs.
+#
+# No custom linker is configured on purpose: forcing clang+lld broke builds on
+# machines without lld. The default linker is plenty fast for two small crates.
+[build]
+rustflags = ["-C", "target-cpu=native"]
