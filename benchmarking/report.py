@@ -6,7 +6,7 @@ from collections.abc import Iterable
 from pathlib import Path
 
 from benchmarking import paths, runners
-from benchmarking.types import BenchResult, Language, Problem
+from benchmarking.types import LANGUAGE_LABELS, BenchResult, Language, Problem
 
 _BASELINE: Language = "python"
 _MS_PER_SECOND = 1000
@@ -55,16 +55,17 @@ def _problem_section(problem: Problem, results: list[BenchResult]) -> str:
     sizes = sorted({r.size for r in results})
     lookup = {(r.language, r.size): r.elapsed_ms for r in results}
 
+    labels = [LANGUAGE_LABELS[lang] for lang in languages]
     header = f"### {problem.value}\n\n_Time (lower is better)_\n"
     time_table = _table(
-        head=[problem.size_label, *languages],
+        head=[problem.size_label, *labels],
         rows=[
             [f"{size:,}", *[_fmt_ms(lookup.get((lang, size))) for lang in languages]]
             for size in sizes
         ],
     )
 
-    speedup_head = [problem.size_label, *[f"{lang} x" for lang in languages]]
+    speedup_head = [problem.size_label, *[f"{label} x" for label in labels]]
     speedup_rows = [
         [
             f"{size:,}",

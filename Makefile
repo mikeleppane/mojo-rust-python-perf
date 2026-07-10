@@ -70,5 +70,5 @@ compare: build
 
 clean:
 	cargo clean
-	rm -f n_body_mojo/n_body
+	rm -f n_body_mojo/n_body n_body_mojo/n_body_naive
 	rm -rf results

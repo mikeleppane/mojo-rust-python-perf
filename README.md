@@ -1,7 +1,7 @@
 # Mojo, Rust and Python: a performance comparison
 
-The same two numerical problems implemented in **Python** (pure and NumPy),
-**Rust**, and **Mojo**, timed under a single harness.
+The same two numerical problems implemented across **Python** (pure, PyPy and
+NumPy), **Rust**, and **Mojo** (naive and SIMD), timed under a single harness.
 
 - **n-body** — gravitational simulation of the Sun and the four gas giants
   (the classic [Benchmarks Game](https://benchmarksgame-team.pages.debian.net/benchmarksgame/description/nbody.html)
@@ -14,25 +14,25 @@ The same two numerical problems implemented in **Python** (pure and NumPy),
 ## Results
 
 Measured on an Intel Core i9-14900K, Ubuntu 24.04 (Linux 6.17), with
-Python 3.14.5, Rust 1.96.0 and Mojo 1.0.0b2. Each cell is the fastest of 9 runs,
-pinned to a single CPU core; **only the compute is timed**
+Python 3.14.5 (and PyPy 3.11), Rust 1.97.0 and Mojo 1.0.0b2. Each cell is the
+fastest of 9 runs, pinned to a single CPU core; **only the compute is timed**
 (see [Methodology](#methodology)).
 
 ### n-body — time (lower is better)
 
-| steps | Python | NumPy | Rust | Mojo |
-| :--- | ---: | ---: | ---: | ---: |
-| 10,000 | 25.2 ms | 57.6 ms | 0.30 ms | 0.29 ms |
-| 100,000 | 254 ms | 574 ms | 2.96 ms | 3.00 ms |
-| 1,000,000 | 2,541 ms | 5,749 ms | 29.6 ms | 27.9 ms |
+| steps | Python | PyPy | NumPy | Rust | Mojo (naive) | Mojo (SIMD) |
+| :--- | ---: | ---: | ---: | ---: | ---: | ---: |
+| 10,000 | 25.3 ms | 10.5 ms | 57.8 ms | 0.30 ms | 1.24 ms | 0.30 ms |
+| 100,000 | 252 ms | 22.3 ms | 578 ms | 2.97 ms | 12.5 ms | 3.01 ms |
+| 1,000,000 | 2,528 ms | 141 ms | 5,780 ms | 29.6 ms | 123 ms | 27.8 ms |
 
 ### n-body — speedup vs. pure Python (higher is better)
 
-| steps | Python | NumPy | Rust | Mojo |
-| :--- | ---: | ---: | ---: | ---: |
-| 10,000 | 1× | 0.4× | 85× | 86× |
-| 100,000 | 1× | 0.4× | 86× | 85× |
-| 1,000,000 | 1× | 0.4× | 86× | 91× |
+| steps | Python | PyPy | NumPy | Rust | Mojo (naive) | Mojo (SIMD) |
+| :--- | ---: | ---: | ---: | ---: | ---: | ---: |
+| 10,000 | 1× | 2.4× | 0.4× | 85× | 21× | 85× |
+| 100,000 | 1× | 11× | 0.4× | 85× | 20× | 84× |
+| 1,000,000 | 1× | 18× | 0.4× | 85× | 21× | 91× |
 
 ### pidigits — time (lower is better)
 
@@ -44,12 +44,20 @@ pinned to a single CPU core; **only the compute is timed**
 
 ### What the numbers say
 
-- **Rust and Mojo are a dead heat.** They trade the lead across sizes and runs
-  (at 1M steps this run: Mojo 27.9 vs Rust 29.6 ms), both ~85–91× pure Python.
-  The differences sit inside run-to-run variance — there is no consistent winner.
-- **SIMD is not a silver bullet here.** Mojo uses 4-wide SIMD vectors (one lane
+- **Naive Mojo is no longer an embarrassment.** In the 2024 post the naive,
+  `List`-based Mojo was *slower than pure Python* (0.5×). The same naive style on
+  Mojo 1.0 is now **~20× faster than Python** — the single biggest change since
+  then. It still trails the SIMD version by ~4×, so hand-vectorising is worth it,
+  but the "obvious" Mojo code is now firmly compiled-language territory.
+- **Rust and Mojo (SIMD) are a dead heat.** They trade the lead across sizes and
+  runs (at 1M steps this run: Mojo 27.8 vs Rust 29.6 ms), both ~85–91× pure
+  Python. The differences sit inside run-to-run variance — no consistent winner.
+- **SIMD is not a silver bullet here.** Mojo (SIMD) uses 4-wide vectors (one lane
   wasted on a 3-D problem) plus a horizontal `reduce_add`; Rust uses scalar
   `[f64; 3]` with explicit FMA. Both saturate the same FP units, so they tie.
+- **PyPy is a free win for pure Python.** Same source, no changes: 2.4× at 10k
+  steps rising to 18× at 1M as the JIT warms up. It never catches the compiled
+  languages, but it is the cheapest speedup on the board.
 - **NumPy is *slower* than pure Python here.** Vectorising a five-body system
   pays per-step array-allocation overhead that never amortises: the arrays are
   tiny and the step loop still runs in Python. NumPy wins when *N* is large, not
@@ -71,11 +79,12 @@ cost. So each implementation times **only the hot region** with a monotonic
 clock — the integration loop for n-body, the Chudnovsky computation for pidigits
 — and prints `ELAPSED_MS <value>`. Process start-up, interpreter boot, NumPy
 import, argument parsing and result formatting are all excluded. The Python and
-NumPy variants are timed in-process; Rust and Mojo run as release binaries (`target-cpu=native`, `-O3`)
-whose self-reported time the harness reads back. The harness pins itself (and,
-by inheritance, the subprocesses) to one CPU core to cut scheduler and turbo
-noise. Every case is run 9 times and the minimum is kept (the least-perturbed
-sample). All implementations are single-threaded.
+NumPy variants are timed in-process; PyPy, Rust and Mojo run as subprocesses
+(Rust/Mojo as release binaries, `target-cpu=native` / `-O3`) whose self-reported
+time the harness reads back. The harness pins itself (and, by inheritance, the
+subprocesses) to one CPU core to cut scheduler and turbo noise. Every case is run
+9 times and the minimum is kept (the least-perturbed sample). All implementations
+are single-threaded.
 
 ## Getting started
 
@@ -84,16 +93,18 @@ You need [uv](https://docs.astral.sh/uv/), a Rust toolchain (1.85+ for edition
 
 ```bash
 uv sync                       # Python 3.14 env + dev tools
+uv python install pypy3.11    # PyPy interpreter (for the PyPy variant)
 cargo build --release         # Rust binaries
-make build                    # also builds the Mojo binary via pixi
+make build                    # also builds the two Mojo binaries via pixi
 ```
 
 Run one case:
 
 ```bash
-uv run benchmarks n-body  -l mojo   -s 1000000 -r 9 --core 3
-uv run benchmarks n-body  -l numpy  -s 100000
-uv run benchmarks pidigits -l rust  -d 100000
+uv run benchmarks n-body  -l mojo       -s 1000000 -r 9 --core 3
+uv run benchmarks n-body  -l mojo-naive  -s 1000000
+uv run benchmarks n-body  -l pypy        -s 1000000
+uv run benchmarks pidigits -l rust       -d 100000
 ```
 
 Run the whole comparison:
@@ -126,9 +137,10 @@ A single `Makefile` fronts all three toolchains:
 benchmarking/            Python package: CLI, harness, report generator
   algorithms/            pure-Python + NumPy reference implementations
   runners.py             runs each language and captures timings
+scripts/pypy_nbody.py    standalone PyPy entry point (outside the package)
 n_body_rust/             Rust crate: n-body        (workspace member)
 pidigits_rust/           Rust crate: pidigits      (workspace member)
-n_body_mojo/             Mojo project (pixi): n-body in modern Mojo
+n_body_mojo/             Mojo project (pixi): n_body.mojo (SIMD) + n_body_naive.mojo
 tests/                   Python correctness tests
 ```
 

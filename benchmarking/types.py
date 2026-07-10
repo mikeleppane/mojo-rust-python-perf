@@ -4,9 +4,19 @@ from dataclasses import dataclass
 from enum import StrEnum
 from typing import Literal, get_args
 
-type Language = Literal["python", "numpy", "rust", "mojo"]
+type Language = Literal["python", "pypy", "numpy", "rust", "mojo-naive", "mojo"]
 
 LANGUAGES: tuple[Language, ...] = get_args(Language.__value__)
+
+# Display names for report tables (raw value -> label).
+LANGUAGE_LABELS: dict[Language, str] = {
+    "python": "Python",
+    "pypy": "PyPy",
+    "numpy": "NumPy",
+    "rust": "Rust",
+    "mojo-naive": "Mojo (naive)",
+    "mojo": "Mojo (SIMD)",
+}
 
 
 class Problem(StrEnum):

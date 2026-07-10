@@ -10,7 +10,9 @@ mojo = "==1.0.0b2,<2"
 
 [tasks]
 version = "mojo --version"
-build = "mojo build n_body.mojo -O3 -o n_body"
+build = { depends-on = ["build-simd", "build-naive"] }
+build-simd = "mojo build n_body.mojo -O3 -o n_body"
+build-naive = "mojo build n_body_naive.mojo -O3 -o n_body_naive"
 run = "mojo run n_body.mojo"
 fmt = "mojo format ."
-test = "mojo run -I . test_n_body.mojo"
+test = "mojo run -I . test_n_body.mojo && mojo run -I . test_n_body_naive.mojo"

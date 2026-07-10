@@ -4,15 +4,18 @@ Python and NumPy run in-process. Rust and Mojo run as subprocesses that print a
 machine-readable ``ELAPSED_MS <float>`` line, which we parse back out.
 """
 
+import functools
 import os
 import re
 import subprocess
+from pathlib import Path
 
 from benchmarking import paths
 from benchmarking.algorithms import n_body, n_body_numpy, pidigits
 from benchmarking.types import Language, Problem
 
 _ELAPSED_RE = re.compile(r"ELAPSED_MS\s+([0-9.]+)")
+_PYPY_SPEC = "pypy3.11"
 _CONSERVED_RE = re.compile(r"CONSERVED\s+(true|false)")
 
 
@@ -29,7 +32,7 @@ def pin_to_core(core: int) -> None:
 
 # Which languages implement each problem.
 _SUPPORTED: dict[Problem, tuple[Language, ...]] = {
-    Problem.N_BODY: ("python", "numpy", "rust", "mojo"),
+    Problem.N_BODY: ("python", "pypy", "numpy", "rust", "mojo-naive", "mojo"),
     Problem.PIDIGITS: ("python", "rust"),
 }
 
@@ -58,10 +61,14 @@ def run(problem: Problem, language: Language, size: int) -> tuple[float, bool]:
             return _run_python(problem, size)
         case "numpy":
             return n_body_numpy.run(size)
+        case "pypy":
+            return _run_pypy(problem, size)
         case "rust":
             return _run_rust(problem, size)
         case "mojo":
-            return _run_mojo(problem, size)
+            return _run_mojo("n_body.mojo", paths.MOJO_N_BODY_BIN, problem, size)
+        case "mojo-naive":
+            return _run_mojo("n_body_naive.mojo", paths.MOJO_NAIVE_BIN, problem, size)
 
 
 def _run_python(problem: Problem, size: int) -> tuple[float, bool]:
@@ -104,19 +111,43 @@ def _run_rust(problem: Problem, size: int) -> tuple[float, bool]:
     return _run_subprocess([str(binary), flag, str(size)], context=f"rust {problem}")
 
 
-def _run_mojo(problem: Problem, size: int) -> tuple[float, bool]:
+def _run_mojo(source_name: str, binary: Path, problem: Problem, size: int) -> tuple[float, bool]:
     if problem is not Problem.N_BODY:
         raise BenchmarkError(f"mojo does not implement {problem}")
-    ensure_mojo_built()
+    ensure_mojo_binary(source_name, binary)
     cmd = [
         "pixi",
         "run",
         "--manifest-path",
         str(paths.MOJO_MANIFEST),
-        str(paths.MOJO_N_BODY_BIN),
+        str(binary),
         str(size),
     ]
-    return _run_subprocess(cmd, context="mojo n-body")
+    return _run_subprocess(cmd, context=f"mojo ({binary.name})")
+
+
+@functools.cache
+def _pypy_executable() -> str:
+    """Locates the uv-managed PyPy interpreter."""
+    try:
+        proc = subprocess.run(
+            ["uv", "python", "find", _PYPY_SPEC],
+            capture_output=True,
+            text=True,
+            check=True,
+        )
+    except (FileNotFoundError, subprocess.CalledProcessError) as exc:
+        raise BenchmarkError(
+            f"PyPy not found; install it with: uv python install {_PYPY_SPEC}"
+        ) from exc
+    return proc.stdout.strip()
+
+
+def _run_pypy(problem: Problem, size: int) -> tuple[float, bool]:
+    if problem is not Problem.N_BODY:
+        raise BenchmarkError(f"pypy does not implement {problem}")
+    cmd = [_pypy_executable(), str(paths.PYPY_RUNNER), str(size)]
+    return _run_subprocess(cmd, context="pypy n-body")
 
 
 def ensure_rust_built() -> None:
@@ -131,10 +162,9 @@ def ensure_rust_built() -> None:
     )
 
 
-def ensure_mojo_built() -> None:
-    """Builds the Mojo n-body binary if it is missing or out of date."""
-    source = paths.MOJO_DIR / "n_body.mojo"
-    binary = paths.MOJO_N_BODY_BIN
+def ensure_mojo_binary(source_name: str, binary: Path) -> None:
+    """Builds a Mojo n-body binary (`-O3`) if it is missing or out of date."""
+    source = paths.MOJO_DIR / source_name
     if binary.exists() and binary.stat().st_mtime >= source.stat().st_mtime:
         return
     subprocess.run(
