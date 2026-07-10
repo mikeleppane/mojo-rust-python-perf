@@ -23,4 +23,4 @@ def test_prefix_matches_reference(digits: int) -> None:
 
 def test_rejects_out_of_range() -> None:
     with pytest.raises(ValueError, match="invalid digits"):
-        pidigits.chudnovsky(pidigits.MAX_DIGITS)
+        pidigits.chudnovsky(pidigits.MAX_DIGITS + 1)
